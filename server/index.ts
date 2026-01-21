@@ -1494,6 +1494,16 @@ function handleHttpRequest(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  // CSRF Protection: For state-changing requests, if Origin is present, it must be allowed.
+  // Browsers always send Origin for POST/PUT/DELETE/PATCH.
+  // CLI tools/scripts might not, but they are not subject to CSRF in the same way (user intent).
+  if (req.method !== 'GET' && req.method !== 'HEAD' && origin && !isOriginAllowed(origin)) {
+    log(`Blocked CSRF attempt from origin: ${origin}`)
+    res.writeHead(403, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'Origin not allowed' }))
+    return
+  }
+
   if (req.method === 'POST' && req.url === '/event') {
     collectRequestBody(req).then(body => {
       try {
